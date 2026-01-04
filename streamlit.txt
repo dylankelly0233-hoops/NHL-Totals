@@ -1,8 +1,0 @@
-streamlit
-nflreadpy
-pandas
-numpy
-scikit-learn
-requests
-openpyxl
-xlsxwriter
