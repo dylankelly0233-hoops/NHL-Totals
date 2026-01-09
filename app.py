@@ -4,6 +4,7 @@ import requests
 import numpy as np
 import difflib
 import io
+import re  # <--- Added to handle the string cleaning
 from datetime import datetime
 from bs4 import BeautifulSoup
 
@@ -43,14 +44,28 @@ def get_projected_starters():
         r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.content, 'html.parser')
         matchups = soup.find_all('div', class_='starting-goalies_matchup')
+        
         for match in matchups:
             teams = match.find_all('span', class_='logo_ticker')
             goalie_cards = match.find_all('h4', class_='name')
+            
             if len(teams) >= 2 and len(goalie_cards) >= 2:
                 away_team = teams[0].text.strip()
                 home_team = teams[1].text.strip()
-                starters[away_team] = goalie_cards[0].text.strip()
-                starters[home_team] = goalie_cards[1].text.strip()
+                
+                # --- HELPER TO CLEAN NAMES ---
+                def clean_name(raw_text):
+                    # Check if it looks like the messy dict format: "{'default': 'Name'}"
+                    if "default" in raw_text and "{" in raw_text:
+                        # Extract text inside the quotes for 'default'
+                        matches = re.findall(r"'default': '([^']+)'", raw_text)
+                        if matches:
+                            return " ".join(matches) # Joins "First" and "Last"
+                    return raw_text
+
+                starters[away_team] = clean_name(goalie_cards[0].text.strip())
+                starters[home_team] = clean_name(goalie_cards[1].text.strip())
+                
         return starters
     except Exception:
         return {}
