@@ -4,7 +4,7 @@ import requests
 import numpy as np
 import difflib
 import io
-import re  # <--- Added to handle the string cleaning
+import re  # <--- Required for the name cleaning
 from datetime import datetime
 from bs4 import BeautifulSoup
 
@@ -53,21 +53,25 @@ def get_projected_starters():
                 away_team = teams[0].text.strip()
                 home_team = teams[1].text.strip()
                 
-                # --- HELPER TO CLEAN NAMES ---
+                # --- ROBUST CLEANING LOGIC ---
                 def clean_name(raw_text):
-                    # Check if it looks like the messy dict format: "{'default': 'Name'}"
-                    if "default" in raw_text and "{" in raw_text:
-                        # Extract text inside the quotes for 'default'
-                        matches = re.findall(r"'default': '([^']+)'", raw_text)
+                    # 1. Check if it looks like the messy dict format
+                    if "default" in raw_text:
+                        # Regex to find text inside quotes after "default":
+                        # Matches: {'default': 'Name'} OR {"default": "Name"}
+                        matches = re.findall(r"['\"]default['\"]\s*:\s*['\"]([^'\"]+)['\"]", raw_text)
                         if matches:
-                            return " ".join(matches) # Joins "First" and "Last"
+                            return " ".join(matches) # Joins "Akira" and "Schmid"
+                    
+                    # 2. Fallback: If it's just normal text, return it
                     return raw_text
 
                 starters[away_team] = clean_name(goalie_cards[0].text.strip())
                 starters[home_team] = clean_name(goalie_cards[1].text.strip())
                 
         return starters
-    except Exception:
+    except Exception as e:
+        print(f"Error scraping starters: {e}")
         return {}
 
 @st.cache_data(ttl=3600)
